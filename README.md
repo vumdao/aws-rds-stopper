@@ -9,7 +9,9 @@
 
 ## Abstract
 - Customers needing to keep an Amazon Relational Database Service (Amazon RDS) instance stopped for more than 7 days, look for ways to efficiently re-stop the database after being [automatically started by Amazon RDS](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_StopInstance.html). If the database is started and there is no mechanism to stop it; customers start to pay for the instance’s hourly cost
+
 - Stopping and starting a DB instance is faster than creating a DB snapshot, and then restoring the snapshot.
+
 - This blog provides a step-by-step approach to automatically stop an RDS cluster with fully serverless and using Pulumi to create AWS resources
 
 ## Table Of Contents
@@ -23,11 +25,14 @@
  * [Create lambda function to send slack](#Create-lambda-function-to-send-slack)
  * [SFN IAM role to trigger lambda functions](#SFN-IAM-role-to-trigger-lambda-functions)
  * [Pulumi deploy stack](#Pulumi-deploy-stack)
+ * [Conclusion](#Conclusion)
 
 ---
 
-## 🚀 Overview of Pulumi <a name="Overview-of-Pulumi"></a>
-- It's overview but steps-by-step to create pulumi project and its stack
+## 🚀 **Overview of Pulumi** <a name="Overview-of-Pulumi"></a>
+- [Why Pulumi?](https://www.pulumi.com/why-pulumi/) Pulumi enables developers to write infrastructure as code in their favorite languages, such as TypeScript, JavaScript, Python, and Go.
+
+- Here is general steps-by-step to create pulumi project and its stack
 
 1. Create new project
 ```
@@ -69,7 +74,7 @@ pulumi import aws:ec2/securityGroup:SecurityGroup vpc_sg sg-13a02c7a
 pulumi refresh
 ```
 
-## 🚀 Solution overview <a name="Solution-overview"></a>
+## 🚀 **Solution overview** <a name="Solution-overview"></a>
 
 <img alt="RDS Auto Restart Protection" src="images/flow.png" width="700" />
 
@@ -87,7 +92,7 @@ pulumi refresh
 
 # **Let's start writing IaC using Pulumi and typescript**
 
-## 🚀 Create RDS cluster with multiple instances <a name="Create-RDS-cluster-with-multiple-instances"></a>
+## 🚀 **Create RDS cluster with multiple instances** <a name="Create-RDS-cluster-with-multiple-instances"></a>
 - Create RDS cluster with one or more instances
 - Using the imported existing VPC (optional)
 
@@ -149,7 +154,7 @@ for (const range = {value: 0}; range.value < 1; range.value++) {
 
 </details>
 
-## 🚀 Create SNS topic and subscribe event to the RDS cluster <a name="Create-SNS-topic-and-subscribe-event-to-the-RDS-cluster"></a>
+## 🚀 **Create SNS topic and subscribe event to the RDS cluster** <a name="Create-SNS-topic-and-subscribe-event-to-the-RDS-cluster"></a>
 - Create a SNS topic to receive events from RDS cluster
 - Create event subscription:
   - Target: the SNS topic
@@ -198,7 +203,7 @@ sns_rds_event.onEvent('sns-lambda-trigger', state_machine_handler, sns_sub)
 
 </details>
 
-## 🚀 Create Lambda function which is subscribe to the SNS topic <a name="Create-Lambda-function-which-is-subscribe-to-the-SNS-topic"></a>
+## 🚀 **Create Lambda function which is subscribe to the SNS topic** <a name="Create-Lambda-function-which-is-subscribe-to-the-SNS-topic"></a>
 - The lambda function will be triggerd by SNS topic whenever there's event
 - The lambda function parses the event message to filter event ID `RDS-EVENT-0153` and checks the RDS cluster tag for key:value `auto-restart-protection: yes`. If all conditions match, then the lambda function execute Step Functions state machine
 
@@ -450,7 +455,7 @@ export const stepFunction = new aws.sfn.StateMachine('SfnRdsEvent', {
 
 </details>
 
-## 🚀 Create lambda function to retrieve RDS cluster and instances status <a name="Create-lambda-function-to-retrieve-RDS-cluster-and-instances-status"></a>
+## 🚀 **Create lambda function to retrieve RDS cluster and instances status** <a name="Create-lambda-function-to-retrieve-RDS-cluster-and-instances-status"></a>
 
 <details>
 <summary>retrieve-rds-status.ts</summary>
@@ -472,7 +477,7 @@ export const retrieve_rds_status_handler = new aws.lambda.Function('RetrieveRdsS
 
 </details>
 
-## 🚀 Create lambda function to stop RDS cluster <a name="Create-lambda-function-to-stop-RDS-cluster"></a>
+## 🚀 **Create lambda function to stop RDS cluster** <a name="Create-lambda-function-to-stop-RDS-cluster"></a>
 
 <details>
 <summary>stop-rds.ts</summary>
@@ -494,7 +499,7 @@ export const stop_rds_cluster_handler = new aws.lambda.Function('StopRdsClusterF
 
 </details>
 
-## 🚀 Create lambda function to send slack <a name="Create-lambda-function-to-send-slack"></a>
+## 🚀 **Create lambda function to send slack** <a name="Create-lambda-function-to-send-slack"></a>
 
 <details>
 <summary>send-slack.ts</summary>
@@ -516,7 +521,7 @@ export const send_slack_handler = new aws.lambda.Function('SendSlackFunc', {
 
 </details>
 
-## 🚀 SFN IAM role to trigger lambda functions <a name="SFN-IAM-role-to-trigger-lambda-functions"></a>
+## 🚀 **SFN IAM role to trigger lambda functions** <a name="SFN-IAM-role-to-trigger-lambda-functions"></a>
 
 <details>
 <summary>sfn-role.ts</summary>
@@ -545,9 +550,14 @@ export const sfn_role = new aws.iam.Role('SfnRdsRole', {
 
 </details>
 
-## 🚀 Pulumi deploy stack <a name="Pulumi-deploy-stack"></a>
+## 🚀 **Pulumi deploy stack** <a name="Pulumi-deploy-stack"></a>
 
 <img src="images/pulumi-resources.png"/>
+
+## 🚀 **Conclusion** <a name="Conclusion"></a>
+- We now can save time and save money with this solution. Plus, we will receive slack message when there're events
+
+- Although Pulumi Supports Many Clouds and provisioner and can visulize the resources chart within the stack but there're more options such as AWS Cloud Development Kit (CDK)
 
 ---
 
